@@ -1,5 +1,3 @@
-!.gitkeep
-
 *.pyc
 venv
 
@@ -10,3 +8,5 @@ audio/cut/*
 audio/raw/*
 audio/archive/*
 output/*
+
+!.gitkeep
