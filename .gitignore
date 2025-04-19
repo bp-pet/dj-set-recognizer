@@ -1,0 +1,12 @@
+!.gitkeep
+
+*.pyc
+venv
+
+test.py
+
+url.txt
+audio/cut/*
+audio/raw/*
+audio/archive/*
+output/*
