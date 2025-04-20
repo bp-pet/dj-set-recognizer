@@ -1,45 +1,62 @@
-from src.settings import cut_dir, output_dir, save_json, shazam_timeout_seconds
+from src.settings import cut_dir, output_dir, shazam_timeout_seconds
 from src.tools import list_files_in_directory
 
+import os
 import json
 import asyncio
+from tqdm.asyncio import tqdm
 
 from shazamio import Shazam, Serialize
 
+shazam = Shazam()
+
 completed_counter = 0
 lock = asyncio.Lock()
+progress_bar = None
+
+def run_recognize():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    return loop.run_until_complete(recognize_all())
+
+def get_ts_from_dir(path):
+    start_ts = path.split('__')[1].split('_')[0]
+    end_ts = path.split('__')[1].split('_')[1].split('.')[0]
+    return start_ts, end_ts
 
 async def recognize_all():
-    file_dirs = list_files_in_directory(cut_dir)
-    file_dirs = [i for i in file_dirs if '2.' in i]
+    global progress_bar
+    file_dirs = sorted(list_files_in_directory(cut_dir))
     num_segments = len(file_dirs)
-    print(f'Starting recognition on {num_segments} segments')
-    results_all = await asyncio.gather(*[tracked_recognize_segment(f"{cut_dir}\\{file_dir}", num_segments) for file_dir in file_dirs], return_exceptions=True)
-
-    results_final = set([r for r in results_all if not isinstance(r, Exception)])
-    num_errors = sum(isinstance(r, Exception) for r in results_all)
+    progress_bar = tqdm(total=num_segments, desc="Completed recognizing segments")
+    results_all = await asyncio.gather(*[tracked_recognize_segment(os.path.join(cut_dir, file_dir), num_segments) for file_dir in file_dirs])
+    num_errors = sum('-' not in r for r in results_all)
+    progress_bar.close()
     print(f'Recognized {num_segments - num_errors} out of {len(file_dirs)} segments')
 
-    return set(results_final)
+    with open(os.path.join(output_dir, 'recognized_tracks.txt'), 'w') as f:
+        for line, path in zip(results_all, file_dirs):
+            start_ts, end_ts = get_ts_from_dir(path)
+            f.write(f"{start_ts} - {line}\n")
 
 async def tracked_recognize_segment(path, num_segments):
     """Wrapper for keeping track of progress"""
     global completed_counter
+    global progress_bar
     try:
         return await recognize_segment(path)
     except Exception as e:
-        print(e)
+        return f'___{e.__class__.__name__}___'
     finally:
         async with lock:
             completed_counter += 1
-            if completed_counter % 5 == 0:
-                print(f"Progress: {completed_counter}/{num_segments}")
+            if progress_bar:
+                progress_bar.update(1)
 
 
-async def recognize_segment(path: str) -> str:
-    shazam = Shazam() # TODO move to setup
+async def recognize_segment(path: str, save_json: bool=False) -> str:
     
-    # # try with deprecated function
+    # # TODO try with deprecated function
     # with open(path, 'rb') as f:
     #     sound_bytes = f.read()
     # out = await asyncio.wait_for(shazam.recognize_song(sound_bytes), timeout=shazam_timeout_seconds)
@@ -47,14 +64,12 @@ async def recognize_segment(path: str) -> str:
     out = await asyncio.wait_for(shazam.recognize(path), timeout=shazam_timeout_seconds)
 
     if save_json:
-        id = path.split('.')[-2][-1]
-        with open(f'{output_dir}\\shazam_output_{id}.json', 'w') as f:
+        with open(os.path.join(output_dir, f"shazam_output.json"), 'w') as f:
             json.dump(out, f, indent=4)
 
     if out['matches'] == []:
-        return
+        return '___No matches___'
 
     track = out['track']['title']
     artist = out['track']['subtitle']
-    # print(path, track, artist, '\n')
     return f'{artist} - {track}'

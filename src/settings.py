@@ -1,5 +1,8 @@
-cut_dir = "audio\\cut"
-raw_dir = "audio\\raw"
+import os
+
+cut_dir = os.path.join("audio", "cut")
+raw_dir = os.path.join("audio", "raw")
 output_dir = "output"
-save_json = False
+target_url_dir = "url.txt"
+
 shazam_timeout_seconds = 30
