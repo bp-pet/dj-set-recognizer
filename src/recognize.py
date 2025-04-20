@@ -63,7 +63,7 @@ async def recognize_segment(path: str, save_json: bool=False) -> str:
         out = await asyncio.wait_for(shazam.recognize(path), timeout=shazam_timeout_seconds)
 
     if save_json:
-        with open(os.path.join(output_dir, f"shazam_output.json"), 'w') as f:
+        with open(os.path.join(output_dir, "shazam_output.json"), 'w') as f:
             json.dump(out, f, indent=4)
 
     if out['matches'] == []:

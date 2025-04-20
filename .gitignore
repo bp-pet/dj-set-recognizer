@@ -1,6 +1,7 @@
 *.pyc
 venv
 .venv
+.vscode
 
 test.py
 

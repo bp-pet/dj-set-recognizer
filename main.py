@@ -1,5 +1,3 @@
-import asyncio
-
 from src.download import download_audio
 from src.cut import cut_audio
 from src.recognize import run_recognize
