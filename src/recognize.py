@@ -1,4 +1,4 @@
-from src.settings import cut_dir, output_dir, shazam_timeout_seconds
+from src.settings import cut_dir, output_dir, shazam_timeout_seconds, use_deprecated_recognize
 from src.tools import list_files_in_directory
 
 import os
@@ -6,7 +6,7 @@ import json
 import asyncio
 from tqdm.asyncio import tqdm
 
-from shazamio import Shazam, Serialize
+from shazamio import Shazam
 
 shazam = Shazam()
 
@@ -56,12 +56,11 @@ async def tracked_recognize_segment(path, num_segments):
 
 async def recognize_segment(path: str, save_json: bool=False) -> str:
     
-    # # TODO try with deprecated function
-    # with open(path, 'rb') as f:
-    #     sound_bytes = f.read()
-    # out = await asyncio.wait_for(shazam.recognize_song(sound_bytes), timeout=shazam_timeout_seconds)
-    
-    out = await asyncio.wait_for(shazam.recognize(path), timeout=shazam_timeout_seconds)
+    if use_deprecated_recognize:
+        out = await asyncio.wait_for(shazam.recognize_song.__wrapper__(shazam, path), timeout=shazam_timeout_seconds)
+        # wrapped for ignoring deprecation decorator
+    else:
+        out = await asyncio.wait_for(shazam.recognize(path), timeout=shazam_timeout_seconds)
 
     if save_json:
         with open(os.path.join(output_dir, f"shazam_output.json"), 'w') as f:

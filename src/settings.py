@@ -6,3 +6,4 @@ output_dir = "output"
 target_url_dir = "url.txt"
 
 shazam_timeout_seconds = 30
+use_deprecated_recognize = False
